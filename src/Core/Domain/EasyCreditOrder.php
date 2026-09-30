@@ -54,13 +54,13 @@ class EasyCreditOrder extends EasyCreditOrder_parent
     /**
      * Overrides standard oxid finalizeOrder method to handle easyCredit payment
      *
-     * @param $oBasket Basket object
+     * @param Basket $oBasket Basket object
      * @param object $oUser Current User object
      * @param bool $blRecalculatingOrder Order recalculation
      *
      * @return integer
      */
-    public function finalizeOrder($oBasket, $oUser, $blRecalculatingOrder = false)
+    public function finalizeOrder(Basket $oBasket, $oUser, $blRecalculatingOrder = false)
     {
         if (!$this->isEasyCreditInstallmentPayment($oBasket->getPaymentId()) &&
             !$this->isEasyCreditInvoicePayment($oBasket->getPaymentId())
@@ -84,9 +84,9 @@ class EasyCreditOrder extends EasyCreditOrder_parent
     /**
      * Set additional attributes to order if payment is easycredit-module instalment
      *
-     * @param $oBasket Shopping basket object
+     * @param Basket $oBasket Shopping basket object
      */
-    public function loadFromBasket($oBasket)
+    public function loadFromBasket(Basket $oBasket)
     {
         parent::loadFromBasket($oBasket);
 
@@ -533,8 +533,16 @@ class EasyCreditOrder extends EasyCreditOrder_parent
         $orderdata = $tradingApiService->getOrderData();
         if (EasyCreditDicFactory::getDic()->getApiConfig()->getEasyCreditUseApiVersionV3() && $this->oxorder__ecredisv3order->value == 1) {
             $state = $orderdata->status;
+            // also update oxpaid date
+            if (($state === 'REPORT_CAPTURE' || $state === 'IN_BILLING') && $this->oxorder__oxpaid->value === '0000-00-00 00:00:00')
+            {
+                $this->oxorder__oxpaid = new Field(date('Y-m-d H:i:s'));
+            }
         } else {
             $state = $orderdata[0]->haendlerstatusV2;
+            if ($state === 'IN_ABRECHNUNG' && $this->oxorder__oxpaid->value === '0000-00-00 00:00:00') {
+                $this->oxorder__oxpaid = new Field(date('Y-m-d H:i:s'));
+            }
         }
 
         $this->oxorder__ecreddeliverystate = new Field($state, Field::T_RAW);
